@@ -87,6 +87,10 @@ sealed class Doc {
         )
     }
 
+    fun indent(amount: Int): Doc {
+        return Indent(amount, this)
+    }
+
     companion object {
 
         val lineOrSpace =

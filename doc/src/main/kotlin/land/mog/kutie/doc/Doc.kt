@@ -21,7 +21,7 @@ sealed class Doc {
                     else renderQueue(env, doc.broken + remain, builder, flatten)
                 }
                 is Text -> renderQueue(env.addPosition(doc.value.length), remain, builder.append(doc.value), flatten)
-                is Line -> renderQueue(env, remain, builder.append('\n').append(
+                is Line -> renderQueue(env.setPosition(0), remain, builder.append('\n').append(
                     indentString(env.indent)
                 ), flatten)
                 is NoIndentLine -> renderQueue(env, remain, builder.append('\n'), flatten)
@@ -35,7 +35,7 @@ sealed class Doc {
                     @Suppress("NON_TAIL_RECURSIVE_CALL")
                     val flattened = renderQueue(RenderingEnvironment(), listOf(doc.doc), StringBuilder(), true)
 
-                    if (!flattened.contains('\n') && env.position + flattened.length < width) {
+                    if (!flattened.contains('\n') && env.indent * 4 + env.position + flattened.length < width) {
                         renderQueue(env.addPosition(flattened.length), remain, builder.append(flattened), flatten)
                     }
                     else {

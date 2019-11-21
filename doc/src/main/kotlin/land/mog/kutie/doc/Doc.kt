@@ -10,49 +10,47 @@ sealed class Doc {
      */
     fun print(width: Int): String {
 
-        tailrec fun renderQueue(env: RenderingEnvironment, queue: List<Doc>, builder: StringBuilder, flatten: Boolean): String {
-            if (queue.isEmpty()) return builder.toString()
+        tailrec fun printQueue(state: RenderingState, queue: List<Doc>, flatten: Boolean): String {
+            if (queue.isEmpty()) return state.buildText()
             val doc = queue[0]
             val remain = queue.drop(1)
             return when (doc) {
-                is Concat -> renderQueue(env, listOf(doc.left, doc.right) + remain, builder, flatten)
+                is Concat -> printQueue(state, listOf(doc.left, doc.right) + remain, flatten)
                 is IfFlattened -> {
-                    if (flatten) renderQueue(env, doc.flattened + remain, builder, flatten)
-                    else renderQueue(env, doc.broken + remain, builder, flatten)
+                    if (flatten) printQueue(state, doc.flattened + remain, flatten)
+                    else printQueue(state, doc.broken + remain, flatten)
                 }
-                is Text -> renderQueue(env.addPosition(doc.value.length), remain, builder.append(doc.value), flatten)
-                is Line -> renderQueue(env.setPosition(0), remain, builder.append('\n').append(
-                    indentString(env.indent)
-                ), flatten)
-                is NoIndentLine -> renderQueue(env, remain, builder.append('\n'), flatten)
+                is Text -> printQueue(state.appendText(doc.value), remain, flatten)
+                is Line -> printQueue(state.appendNewLine(), remain, flatten)
+                is NoIndentLine -> printQueue(state.appendText("\n"), remain, flatten)
 
                 is Indent -> {
                     @Suppress("NON_TAIL_RECURSIVE_CALL")
-                    val rendered = renderQueue(env.indent(doc.indent), listOf(doc.doc), StringBuilder(), flatten)
-                    renderQueue(env, remain, builder.append(rendered), flatten)
+                    val rendered = printQueue(state.indent(doc.indent).copy(builder = StringBuilder()), listOf(doc.doc), flatten)
+                    printQueue(state.appendText(rendered), remain, flatten)
                 }
                 is Group -> {
                     @Suppress("NON_TAIL_RECURSIVE_CALL")
-                    val flattened = renderQueue(RenderingEnvironment(), listOf(doc.doc), StringBuilder(), true)
+                    val flattened = printQueue(state.copy(builder = StringBuilder()), listOf(doc.doc), true)
 
-                    if (!flattened.contains('\n') && env.indent * 4 + env.position + flattened.length < width) {
-                        renderQueue(env.addPosition(flattened.length), remain, builder.append(flattened), flatten)
+                    if (!flattened.contains('\n') && state.position + flattened.length < width) {
+                        printQueue(state.appendText(flattened), remain, flatten)
                     }
                     else {
                         @Suppress("NON_TAIL_RECURSIVE_CALL")
-                        val broken = renderQueue(env, listOf(doc.doc), StringBuilder(), false)
+                        val broken = printQueue(state.copy(builder = StringBuilder()), listOf(doc.doc), false)
 
-                        val newPosition = broken.takeLastWhile { it != '\n' }.length.let {
-                            if (it != broken.length) it
-                            else env.position + it
-                        }
-                        renderQueue(env.setPosition(newPosition), remain, builder.append(broken), flatten)
+//                        val newPosition = broken.takeLastWhile { it != '\n' }.length.let {
+//                            if (it != broken.length) it
+//                            else state.position + it
+//                        }
+                        printQueue(state.appendText(broken), remain, flatten)
                     }
                 }
             }
         }
 
-        return renderQueue(RenderingEnvironment(), listOf(this), StringBuilder(), true)
+        return printQueue(RenderingState(), listOf(this), true)
     }
 
     /**
@@ -121,11 +119,32 @@ sealed class Doc {
     }
 }
 
-private data class RenderingEnvironment(val position: Int = 0, val indent: Int= 0) {
+private data class RenderingState(val position: Int = 0, val indent: Int = 0, private val builder: StringBuilder = StringBuilder()) {
 
-    fun addPosition(diff: Int) = this.copy(position = position + diff)
-    fun setPosition(new: Int) = this.copy(position = new)
-    fun indent(diff: Int = 1) = this.copy(indent = indent + diff)
+    fun indent(diff: Int = 1) = this.copy(
+        indent = indent + diff
+    )
+
+    fun appendNewLine() = this.copy(
+        position = indent * 4,
+        builder = this.builder.append("\n").append(indentString(this.indent))
+    )
+
+    fun appendText(text: String): RenderingState {
+        val lastLine = text.takeLastWhile { it != '\n' }
+        val position = if (lastLine.length == text.length) {
+            position + text.length
+        } else {
+            lastLine.length
+        }
+
+        return this.copy(
+            builder = this.builder.append(text),
+            position = position
+        )
+    }
+
+    fun buildText(): String = builder.toString()
 }
 
 private fun indentString(indent: Int): String = "    ".repeat(indent)

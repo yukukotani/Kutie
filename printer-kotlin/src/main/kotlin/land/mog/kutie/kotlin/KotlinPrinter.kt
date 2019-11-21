@@ -345,25 +345,25 @@ object KotlinPrinter {
     private fun printBrace(expr: Node.Expr.Brace): Doc {
         val block = expr.block ?: return Doc.Text("")
 
-        val docs = mutableListOf<Doc>()
-        docs.add(Doc.Text("{"))
+        val builder = DocBuilder()
+        builder.append(Doc.Text("{"))
         if (expr.params.isNotEmpty()) {
-            docs.add(Doc.Text(" "))
-            docs.add(
+            builder.append(Doc.Text(" "))
+            builder.append(
                 Doc.join(
                     separator = Doc.Text(", "),
                     docs = expr.params.map { printNodeToDoc(it) })
             )
-            docs.add(Doc.Text(" ->"))
+            builder.append(Doc.Text(" ->"))
         }
         val blockDoc = Doc.concat(
             Doc.lineOrSpace,
             printNodeToDoc(block)
         ).indent(1)
-        docs.add(blockDoc)
-        docs.add(Doc.lineOrSpace)
-        docs.add(Doc.Text("}"))
-        return Doc.concat(docs)
+        builder.append(blockDoc)
+        builder.append(Doc.lineOrSpace)
+        builder.append(Doc.Text("}"))
+        return builder.build()
     }
 
     private fun printBlock(block: Node.Block): Doc {

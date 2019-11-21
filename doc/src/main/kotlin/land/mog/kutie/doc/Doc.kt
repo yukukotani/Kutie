@@ -94,10 +94,24 @@ sealed class Doc {
         val lineOrEmpty =
             IfFlattened(Text(""), Line)
 
-        fun concat(vararg docs: Doc): Doc = docs.reduce { acc, doc -> acc + doc }
-        fun concat(docs: List<Doc>): Doc = docs.reduce { acc, doc -> acc + doc }
+        fun concat(vararg docs: Doc): Doc {
+            if (docs.isEmpty())
+                return Text("")
+
+            return docs.reduce { acc, doc -> acc + doc }
+        }
+        fun concat(docs: List<Doc>): Doc {
+            if (docs.isEmpty())
+                return Text("")
+
+            return docs.reduce { acc, doc -> acc + doc }
+        }
 
         fun join(separator: Doc, docs: List<Doc>): Doc {
+            if (docs.isEmpty()) {
+                return Text("")
+            }
+
             return docs.reduce { acc, doc -> acc + separator + doc }
         }
     }

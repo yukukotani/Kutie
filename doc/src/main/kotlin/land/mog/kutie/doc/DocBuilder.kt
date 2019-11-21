@@ -12,6 +12,10 @@ class DocBuilder {
         }
     }
 
+    fun appendAll(docs: List<Doc>): DocBuilder = this.apply {
+        docs.forEach { this.doc = this.doc!! + it }
+    }
+
     fun appendText(text: String): DocBuilder = this.apply {
         append(Doc.Text(text))
     }

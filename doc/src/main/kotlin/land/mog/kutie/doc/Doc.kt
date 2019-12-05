@@ -21,6 +21,7 @@ sealed class Doc {
                     else printQueue(state, doc.broken + remain, flatten)
                 }
                 is Text -> printQueue(state.appendText(doc.value), remain, flatten)
+                is ForceBreak -> printQueue(state, doc.doc + remain, false)
                 is Line -> printQueue(state.appendNewLine(), remain, flatten)
                 is NoIndentLine -> printQueue(state.appendText("\n"), remain, flatten)
 
@@ -64,6 +65,7 @@ sealed class Doc {
     data class Group(val doc: Doc): Doc()
     data class Indent(val indent: Int, val doc: Doc): Doc()
     data class IfFlattened(val flattened: Doc, val broken: Doc): Doc()
+    data class ForceBreak(val doc: Doc): Doc()
     object Line: Doc()
     object NoIndentLine: Doc()
 
@@ -87,6 +89,14 @@ sealed class Doc {
 
     fun indent(amount: Int): Doc {
         return Indent(amount, this)
+    }
+
+    fun forceBreak(): Doc {
+        return ForceBreak(this)
+    }
+
+    fun group(): Doc {
+        return Group(this)
     }
 
     companion object {
